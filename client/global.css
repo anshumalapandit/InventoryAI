@@ -1,0 +1,513 @@
+/** @import must precede all other statements */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /**
+   * Tailwind CSS theme
+   * tailwind.config.ts expects the following color variables to be expressed as HSL values.
+   * A different format will require also updating the theme in tailwind.config.ts.
+  */
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 210 13% 16%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 210 13% 16%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 13% 16%;
+
+    --primary: 199 89% 48%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 210 13% 16%;
+
+    --muted: 210 13% 85%;
+    --muted-foreground: 210 13% 45%;
+
+    --accent: 199 89% 48%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 210 13% 92%;
+    --input: 210 13% 92%;
+    --ring: 199 89% 48%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 210 13% 16%;
+
+    --sidebar-foreground: 210 13% 96%;
+
+    --sidebar-primary: 199 89% 48%;
+
+    --sidebar-primary-foreground: 0 0% 100%;
+
+    --sidebar-accent: 210 13% 28%;
+
+    --sidebar-accent-foreground: 210 13% 96%;
+
+    --sidebar-border: 210 13% 28%;
+
+    --sidebar-ring: 199 89% 48%;
+
+    --critical: 0 84% 60%;
+    --critical-light: 0 100% 96%;
+    --critical-foreground: 0 84% 35%;
+
+    --warning: 38 92% 50%;
+    --warning-light: 38 100% 96%;
+    --warning-foreground: 38 92% 25%;
+
+    --success: 142 71% 45%;
+    --success-light: 142 100% 93%;
+    --success-foreground: 142 71% 20%;
+  }
+
+  .dark {
+    --background: 210 13% 8%;
+    --foreground: 210 13% 96%;
+
+    --card: 210 13% 15%;
+    --card-foreground: 210 13% 96%;
+
+    --popover: 210 13% 15%;
+    --popover-foreground: 210 13% 96%;
+
+    --primary: 199 89% 48%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 13% 25%;
+    --secondary-foreground: 210 13% 96%;
+
+    --muted: 210 13% 35%;
+    --muted-foreground: 210 13% 70%;
+
+    --accent: 199 89% 48%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 210 13% 25%;
+    --input: 210 13% 25%;
+    --ring: 199 89% 48%;
+    --sidebar-background: 210 13% 12%;
+    --sidebar-foreground: 210 13% 96%;
+    --sidebar-primary: 199 89% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 13% 28%;
+    --sidebar-accent-foreground: 210 13% 96%;
+    --sidebar-border: 210 13% 28%;
+    --sidebar-ring: 199 89% 48%;
+
+    --critical: 0 84% 60%;
+    --critical-light: 0 100% 25%;
+    --critical-foreground: 0 100% 85%;
+
+    --warning: 38 92% 50%;
+    --warning-light: 38 92% 25%;
+    --warning-foreground: 38 100% 85%;
+
+    --success: 142 71% 45%;
+    --success-light: 142 71% 25%;
+    --success-foreground: 142 100% 85%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  :where(p, span, li, h1, h2, h3, h4, h5, h6, a, button, label, td, th) {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  pre,
+  code {
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  h1 {
+    @apply text-4xl font-bold tracking-tight;
+  }
+
+  h2 {
+    @apply text-3xl font-bold tracking-tight;
+  }
+
+  h3 {
+    @apply text-xl font-semibold tracking-tight;
+  }
+
+  h4 {
+    @apply text-lg font-semibold;
+  }
+
+  p {
+    @apply text-base leading-relaxed;
+  }
+
+  small {
+    @apply text-xs font-medium;
+  }
+}
+
+@layer components {
+  .glass-effect {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    @apply border border-white/20;
+  }
+
+  .dark .glass-effect {
+    background: rgba(20, 25, 35, 0.6);
+    backdrop-filter: blur(10px);
+    @apply border border-white/10;
+  }
+
+  .card-lift {
+    @apply transition-all duration-300;
+  }
+
+  .card-lift:hover {
+    @apply -translate-y-1 shadow-lg;
+  }
+
+  .card-3d {
+    transform-style: preserve-3d;
+    perspective: 1000px;
+  }
+
+  .glow-border {
+    position: relative;
+    border: 1px solid transparent;
+    background-image:
+      linear-gradient(hsl(var(--background)), hsl(var(--background))),
+      linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+  }
+
+  .animate-in-fade {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-pulse-gentle {
+    animation: pulseSoft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulseSoft {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.8;
+    }
+  }
+
+  .counter-number {
+    @apply text-3xl font-bold tabular-nums;
+    animation: counterUp 0.6s ease-out;
+  }
+
+  @keyframes counterUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* 3D Card Effects */
+  .card-3d-hover {
+    @apply transition-all duration-300;
+    transform: perspective(1000px) rotateX(0deg) rotateY(0deg);
+  }
+
+  .card-3d-hover:hover {
+    @apply shadow-2xl;
+    transform: perspective(1000px) rotateX(-2deg) rotateY(2deg) translateZ(10px);
+  }
+
+  /* Smooth Depth and Layering */
+  .card-depth-1 {
+    @apply shadow-sm;
+  }
+
+  .card-depth-2 {
+    @apply shadow-md;
+  }
+
+  .card-depth-3 {
+    @apply shadow-lg;
+  }
+
+  .card-depth-hover-lift {
+    @apply transition-all duration-300 shadow-md;
+  }
+
+  .card-depth-hover-lift:hover {
+    @apply shadow-xl -translate-y-2;
+  }
+
+  /* Micro Interaction Animations */
+  .animate-micro-slide-in {
+    animation: microSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes microSlideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .animate-spin-slow {
+    animation: spin 3s linear infinite;
+  }
+
+  /* Button hover effects */
+  .btn-interactive {
+    @apply relative overflow-hidden transition-all duration-200;
+  }
+
+  .btn-interactive:hover {
+    @apply -translate-y-0.5;
+  }
+
+  .btn-interactive::before {
+    content: "";
+    @apply absolute inset-0 -z-10 bg-gradient-to-r from-transparent via-white/20 to-transparent;
+    transform: translateX(-100%);
+  }
+
+  .btn-interactive:hover::before {
+    animation: shimmer 0.6s;
+  }
+
+  @keyframes shimmer {
+    to {
+      transform: translateX(100%);
+    }
+  }
+
+  /* Input Focus Enhancement */
+  .input-focus-enhanced {
+    @apply transition-all duration-200;
+  }
+
+  .input-focus-enhanced:focus {
+    @apply outline-none ring-2 ring-offset-2;
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1);
+  }
+
+  /* Smooth transitions for data tables */
+  .table-row-hover {
+    @apply transition-colors duration-150;
+  }
+
+  .table-row-hover:hover {
+    @apply bg-secondary/50;
+  }
+
+  /* Alert animations */
+  .alert-slide-in {
+    animation: slideInRight 0.3s ease-out;
+  }
+
+  @keyframes slideInRight {
+    from {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* Modal backdrop animation */
+  .modal-backdrop {
+    animation: fadeInBackdrop 0.2s ease-in;
+  }
+
+  @keyframes fadeInBackdrop {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .modal-content {
+    animation: scaleInCenter 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes scaleInCenter {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Loading skeleton animation */
+  .skeleton-loading {
+    background: linear-gradient(90deg, hsl(var(--secondary)) 25%, hsl(var(--muted)) 50%, hsl(var(--secondary)) 75%);
+    background-size: 200% 100%;
+    animation: shimmerLoad 1.5s infinite;
+  }
+
+  @keyframes shimmerLoad {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  /* Progress bar animation */
+  .progress-bar-animated {
+    animation: slideProgress 0.8s ease-out;
+  }
+
+  @keyframes slideProgress {
+    from {
+      width: 0;
+    }
+    to {
+      width: 100%;
+    }
+  }
+
+  /* Tooltip animation */
+  .tooltip-animated {
+    animation: popIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes popIn {
+    from {
+      opacity: 0;
+      transform: scale(0.8) translateY(-5px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  /* Badge pulse animation */
+  .badge-pulse {
+    animation: badgePulse 2s ease-in-out infinite;
+  }
+
+  @keyframes badgePulse {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.05);
+    }
+  }
+
+  /* Number counter animation */
+  .number-counter {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+  }
+
+  /* Stagger animation for list items */
+  .stagger-item {
+    animation: fadeInUp 0.5s ease-out;
+  }
+
+  .stagger-item:nth-child(2) {
+    animation-delay: 0.05s;
+  }
+
+  .stagger-item:nth-child(3) {
+    animation-delay: 0.1s;
+  }
+
+  .stagger-item:nth-child(4) {
+    animation-delay: 0.15s;
+  }
+
+  .stagger-item:nth-child(5) {
+    animation-delay: 0.2s;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Smooth color transition */
+  .transition-colors-smooth {
+    @apply transition-colors duration-300;
+  }
+
+  /* Link hover effect */
+  .link-interactive {
+    @apply relative transition-colors duration-200;
+  }
+
+  .link-interactive::after {
+    content: "";
+    @apply absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300;
+    width: 0;
+  }
+
+  .link-interactive:hover::after {
+    width: 100%;
+  }
+}

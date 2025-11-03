@@ -1,0 +1,122 @@
+import "dotenv/config";
+import express from "express";
+import cors from "cors";
+import { handleDemo } from "./routes/demo";
+import { query, initializeDatabase } from "./db";
+import { analyzeInventoryWithAI, generateProfitAnalysis, generateInventoryRecommendations } from "./gemini";
+import { handleLogin, handleRegister } from "./routes/auth";
+
+export async function createServer() {
+  const app = express();
+
+  // Middleware
+  app.use(cors());
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+
+  // Initialize database on startup
+  try {
+    await initializeDatabase();
+    console.log("✅ Database initialized successfully");
+  } catch (error) {
+    console.error("❌ Failed to initialize database:", error);
+  }
+
+  // Health check
+  app.get("/api/ping", (_req, res) => {
+    const ping = process.env.PING_MESSAGE ?? "pong";
+    res.json({ message: ping, status: "ok" });
+  });
+
+  app.get("/api/demo", handleDemo);
+
+  // Auth routes
+  app.post("/api/auth/login", handleLogin);
+  app.post("/api/auth/register", handleRegister);
+
+  // ============================================
+  // CHATBOT ENDPOINT
+  // ============================================
+
+  app.post("/api/chat", async (req, res) => {
+    try {
+      const { message, context } = req.body;
+
+      if (!message) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Message is required" 
+        });
+      }
+
+      let aiResponse: string;
+      switch (context) {
+        case "profit":
+          aiResponse = await generateProfitAnalysis(message);
+          break;
+        case "inventory":
+          aiResponse = await generateInventoryRecommendations(message);
+          break;
+        default:
+          aiResponse = await analyzeInventoryWithAI(message);
+      }
+
+      return res.json({ 
+        success: true,
+        message: aiResponse 
+      });
+    } catch (error) {
+      console.error("Chat error:", error);
+      return res.status(500).json({ 
+        success: false,
+        message: "Failed to process your request. Please try again." 
+      });
+    }
+  });
+
+  // ============================================
+  // PRODUCTS ENDPOINTS
+  // ============================================
+
+  // Get all products
+  app.get("/api/products", async (_req, res) => {
+    try {
+      const result = await query("SELECT * FROM products ORDER BY created_at DESC");
+      res.json({ success: true, data: result.rows });
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to fetch products" 
+      });
+    }
+  });
+
+  // Get a single product
+  app.get("/api/products/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = await query("SELECT * FROM products WHERE id = $1", [id]);
+      
+      if (result.rowCount === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Product not found"
+        });
+      }
+
+      res.json({
+        success: true,
+        data: result.rows[0]
+      });
+    } catch (error) {
+      console.error("Error fetching product:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch product"
+      });
+    }
+  });
+
+  return app;
+}
