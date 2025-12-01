@@ -1,16 +1,16 @@
 import { Pool, QueryResult } from "pg";
 
+// Use DATABASE_URL from environment or fallback to localhost
+const DATABASE_URL = process.env.DATABASE_URL || "postgres://postgres:nehu@localhost:5432/orbit_db";
+
 const pool = new Pool({
-  user: 'postgres',
-  password: 'nehu',
-  host: 'localhost',
-  port: 5432,
-  database: 'orbit_db',
+  connectionString: DATABASE_URL,
+  // Connection timeout
+  connectionTimeoutMillis: 5000,
 });
 
 pool.on("error", (err) => {
   console.error("Unexpected error on idle client", err);
-  process.exit(-1);
 });
 
 export async function query(text: string, params?: any[]): Promise<QueryResult> {
