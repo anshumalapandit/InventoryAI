@@ -1,0 +1,4 @@
+sku,last_month_qty,pred_qty,pct_change,confidence,data_points
+SKU001,245,294,4.26,high,31
+SKU002,175,210,2.94,high,31
+SKU003,138,165,2.22,high,31

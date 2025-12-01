@@ -7,21 +7,23 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useAuthContext } from "@/context/AuthContext";
 
 const QUICK_QUESTIONS = [
-  "Which items have very low stock?",
-  "What is my total inventory value?",
-  "Show inventory recommendations",
-  "What are the most valuable products?",
+  "What inventory should I stock more of?",
+  "How can I reduce carrying costs?",
+  "What are my top performing products?",
+  "How should I price my high-demand items?",
 ];
 
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
+  const { user } = useAuthContext();
   const [messages, setMessages] = useState<{ id: string; text: string; sender: "user" | "bot"; timestamp: string }[]>(
     [
       {
         id: "1",
-        text: "Hi! I'm your inventory assistant. I can help you analyze profits, inventory levels, and product performance. What would you like to know?",
+        text: "👋 Hi! I'm your AI inventory assistant powered by Groq. I can help you with inventory optimization, demand forecasting, profit analysis, and supply chain recommendations. What can I help you with today?",
         sender: "bot",
         timestamp: new Date().toISOString(),
       },
@@ -100,11 +102,13 @@ export default function Chatbot() {
     setIsLoading(true);
 
     try {
-      const response = await api.post("/chat", {
+      console.log("📨 Sending message to:", user ? "/api/chat" : "/api/chat/public");
+      const response = await api.post(user ? "/chat" : "/chat/public", {
         message: messageToSend,
       });
 
       const data = response.data;
+      console.log("✅ Chat response received:", data);
 
       const botMessage = {
         id: (Date.now() + 1).toString(),
@@ -115,7 +119,7 @@ export default function Chatbot() {
 
       setMessages((prev) => [...prev, botMessage]);
     } catch (error) {
-      console.error("Chat error:", error);
+      console.error("Chat error details:", error);
       const errorMessage = {
         id: (Date.now() + 1).toString(),
         text: "Sorry, I encountered an error. Please try again later.",
@@ -150,42 +154,39 @@ export default function Chatbot() {
       {/* Chat Window */}
       <Card
         className={cn(
-          "fixed bottom-24 right-4 w-96 max-w-[calc(100vw-2rem)] shadow-2xl transition-transform duration-300 ease-in-out z-40",
+          "fixed bottom-24 right-4 w-96 max-w-[calc(100vw-2rem)] shadow-2xl transition-transform duration-300 ease-in-out z-40 rounded-2xl",
           isOpen ? "translate-y-0" : "translate-y-[150%]"
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between bg-gradient-to-r from-primary to-primary/80 p-4 text-primary-foreground">
-          <div className="flex items-center gap-3">
-            {/* <Avatar className="h-8 w-8 bg-primary-foreground/10">
-              <PackageSearch className="h-4 w-4 text-primary-foreground" />
-            </Avatar> */}
-            <Avatar className="h-8 w-8 bg-white rounded-full flex items-center justify-center">
-  <img
-    src="/chatbot.png"
-    alt="Bot Avatar"
-    className="h-8 w-8 object-contain rounded-full"
-  />
-</Avatar>
+        <div className="flex items-center justify-between bg-gradient-to-r from-blue-500 to-cyan-500 p-3 text-white rounded-t-2xl">
+          <div className="flex items-center gap-2">
+            <Avatar className="h-7 w-7 bg-white rounded-full flex items-center justify-center">
+              <img
+                src="/chatbot.png"
+                alt="Bot Avatar"
+                className="h-7 w-7 object-contain rounded-full"
+              />
+            </Avatar>
 
             <div>
-              <h3 className="font-semibold">Inventory Assistant</h3>
-              <p className="text-xs opacity-90">AI-powered helper</p>
+              <h3 className="font-semibold text-sm">Inventory Assistant</h3>
+              <p className="text-[11px] opacity-80">Powered by Groq</p>
             </div>
           </div>
           <Button
             variant="ghost"
-            size="icon"
+            size="sm"
             onClick={() => setIsOpen(false)}
-            className="text-primary-foreground hover:bg-primary-foreground/20"
+            className="text-white hover:bg-white/20 h-6 w-6 p-0"
           >
-            <X className="h-4 w-4" />
+            <X className="h-3 w-3" />
           </Button>
         </div>
 
         {/* Messages */}
-        <ScrollArea className="h-[400px] p-4">
-          <div className="flex flex-col gap-4">
+        <ScrollArea className="h-[320px] p-3">
+          <div className="flex flex-col gap-3">
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -226,15 +227,15 @@ export default function Chatbot() {
 
                 <div
                   className={cn(
-                    "rounded-lg p-3 max-w-[80%]",
+                    "rounded-lg p-2 max-w-[80%] text-sm",
                     message.sender === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-200 text-gray-900"
                   )}
                 >
                   <p className="text-sm">{message.text}</p>
-                  <span className="text-[10px] opacity-50 mt-1 block">
-                    {new Date(message.timestamp).toLocaleTimeString()}
+                  <span className="text-[10px] opacity-50 mt-0.5 block">
+                    {new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </span>
                 </div>
               </div>
@@ -264,14 +265,14 @@ export default function Chatbot() {
         </ScrollArea>
 
         {/* Quick Questions */}
-        <div className="border-t border-border bg-secondary/20 px-4 py-3 space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">Quick questions:</p>
-          <div className="grid grid-cols-2 gap-2">
-            {QUICK_QUESTIONS.map((question) => (
+        <div className="border-t border-gray-200 bg-gray-50 px-3 py-2 space-y-1.5">
+          <p className="text-[11px] font-semibold text-gray-600">Quick questions:</p>
+          <div className="grid grid-cols-2 gap-1.5">
+            {QUICK_QUESTIONS.slice(0, 2).map((question) => (
               <Button
                 key={question}
                 variant="ghost"
-                className="h-auto py-1.5 px-2 text-xs justify-start font-normal hover:bg-primary/10"
+                className="h-auto py-1 px-1.5 text-[11px] justify-start font-normal hover:bg-blue-100 text-gray-700"
                 onClick={() => handleSendMessage(question)}
               >
                 {question}
@@ -281,30 +282,31 @@ export default function Chatbot() {
         </div>
 
         {/* Input */}
-        <div className="border-t p-4 flex gap-2">
+        <div className="border-t border-gray-200 p-2.5 flex gap-1.5 bg-white rounded-b-2xl">
           <Input
-            placeholder="Ask about inventory, profits, or forecasts..."
+            placeholder="Ask me anything..."
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}
             disabled={isLoading || isListening}
-            className="flex-1"
+            className="flex-1 h-8 text-sm"
           />
           <Button
             onClick={handleVoiceInput}
-            size="icon"
+            size="sm"
             variant={isListening ? "default" : "outline"}
             title={isListening ? "Stop listening..." : "Click to speak"}
-            className={isListening ? "bg-red-500 hover:bg-red-600" : ""}
+            className={`h-8 w-8 p-0 ${isListening ? "bg-red-500 hover:bg-red-600" : ""}`}
           >
-            {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            {isListening ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
           </Button>
           <Button
             onClick={() => handleSendMessage()}
             disabled={!inputValue.trim() || isLoading}
-            size="icon"
+            size="sm"
+            className="h-8 w-8 p-0"
           >
-            <Send className="h-4 w-4" />
+            <Send className="h-3.5 w-3.5" />
           </Button>
         </div>
       </Card>

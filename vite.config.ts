@@ -8,6 +8,12 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    proxy: {
+      "/api/predict": {
+        target: process.env.BACKEND_URL || "http://localhost:8000",
+        changeOrigin: true,
+      },
+    },
     fs: {
       allow: ["./client", "./shared","index.html"],
       deny: [".env", ".env.*", "*.{crt,pem}", "**/.git/**", "server/**"],
@@ -15,6 +21,9 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     outDir: "dist/spa",
+  },
+  define: {
+    __BACKEND_URL__: JSON.stringify(process.env.BACKEND_URL || ""),
   },
   plugins: [react(), expressPlugin()],
   resolve: {

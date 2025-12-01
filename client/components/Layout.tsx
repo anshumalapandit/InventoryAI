@@ -224,10 +224,10 @@ export default function Layout({ children }: LayoutProps) {
             {navigationItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href);
-              const userRole = user?.role as keyof typeof roleItems;
+              const userRole = user?.role as string;
               
               // Only show item if user's role is in the item's roles array
-              if (!item.roles.includes(userRole)) {
+              if (!item.roles.includes(userRole || "")) {
                 return null;
               }
               

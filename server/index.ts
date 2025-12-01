@@ -93,8 +93,9 @@ export async function createServer() {
   // ============================================
 
   // Chatbot endpoint
-  app.post("/api/chat", requireRole(["manager", "admin"]), async (req, res) => {
-    const { message, context } = req.body;
+  // Public chat endpoint (for home page)
+  app.post("/api/chat/public", async (req, res) => {
+    const { message } = req.body;
 
     if (!message) {
       return res.status(400).json({ 
@@ -104,34 +105,182 @@ export async function createServer() {
     }
 
     try {
-      let aiResponse: string;
-      
-      // Fetch inventory data with product details
-      const invResult = await query(`
-        SELECT 
-          i.*, 
-          p.sku, 
-          p.name, 
-          p.category, 
-          p.unit_price,
-          p.cost_price,
-          p.reorder_level,
-          p.min_order_qty
-        FROM inventory i 
-        JOIN products p ON i.product_id = p.id 
-        ORDER BY p.name
-      `);
+      const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
-      const inventoryData = invResult.rows;
-      
-      if (context === "profit") {
-        aiResponse = await generateProfitAnalysis(message);
-      } else if (context === "inventory") {
-        aiResponse = await generateInventoryRecommendations(message);
-      } else {
-        // For general queries, use forecast analysis
-        aiResponse = await analyzeInventoryWithAI(message);
+      if (!GROQ_API_KEY) {
+        return res.status(500).json({
+          success: false,
+          message: "Groq API key not configured"
+        });
       }
+
+      console.log("🤖 Public Chatbot: Calling Groq API...");
+
+      const systemPrompt = `You are an expert inventory management assistant. Keep responses SHORT and CONCISE.
+
+Answer in 2-3 sentences maximum. Use bullet points if needed.
+Focus on: Inventory optimization, demand forecasting, profit analysis, pricing strategies.
+
+Be direct, specific, and actionable. No long explanations.`;
+
+      const response = await fetch(
+        "https://api.groq.com/openai/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${GROQ_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "llama-3.3-70b-versatile",
+            messages: [
+              {
+                role: "system",
+                content: systemPrompt,
+              },
+              {
+                role: "user",
+                content: message,
+              },
+            ],
+            temperature: 0.5,
+            max_tokens: 200,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("❌ Groq API Error:", errorData);
+        return res.status(response.status).json({
+          success: false,
+          message: "Failed to get response from AI. Please try again."
+        });
+      }
+
+      const data = await response.json();
+
+      if (!data.choices || data.choices.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "No response from AI. Please try again."
+        });
+      }
+
+      const choice = data.choices[0];
+      if (!choice.message || !choice.message.content) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid response format from AI."
+        });
+      }
+
+      let aiResponse = choice.message.content.trim();
+      console.log("✅ Public Chatbot Response:", aiResponse);
+
+      res.json({ 
+        success: true,
+        message: aiResponse 
+      });
+    } catch (error) {
+      console.error("Public chat error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to process your request. Please try again." 
+      });
+    }
+  });
+
+  // Protected chat endpoint (for authenticated users)
+  app.post("/api/chat", requireRole(["manager", "admin"]), async (req, res) => {
+    const { message } = req.body;
+
+    if (!message) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Message is required" 
+      });
+    }
+
+    try {
+      const GROQ_API_KEY = process.env.GROQ_API_KEY;
+
+      if (!GROQ_API_KEY) {
+        return res.status(500).json({
+          success: false,
+          message: "Groq API key not configured"
+        });
+      }
+
+      console.log("🤖 Chatbot: Calling Groq API...");
+
+      // System prompt for inventory management assistant
+      const systemPrompt = `You are an expert inventory management assistant. Keep responses SHORT and CONCISE.
+
+Answer in 2-3 sentences maximum. Use bullet points if needed.
+Focus on: Inventory optimization, demand forecasting, profit analysis, pricing strategies.
+
+Be direct, specific, and actionable. No long explanations.`;
+
+      const response = await fetch(
+        "https://api.groq.com/openai/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${GROQ_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "llama-3.3-70b-versatile",
+            messages: [
+              {
+                role: "system",
+                content: systemPrompt,
+              },
+              {
+                role: "user",
+                content: message,
+              },
+            ],
+            temperature: 0.5,
+            max_tokens: 200,
+          }),
+        }
+      );
+
+      console.log("📡 Groq Chatbot Response Status:", response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("❌ Groq API Error:", errorData);
+        return res.status(response.status).json({
+          success: false,
+          message: "Failed to get response from AI. Please try again."
+        });
+      }
+
+      const data = await response.json();
+      console.log("📦 Groq Chatbot Response:", data);
+
+      if (!data.choices || data.choices.length === 0) {
+        console.error("❌ No choices in response:", data);
+        return res.status(400).json({
+          success: false,
+          message: "No response from AI. Please try again."
+        });
+      }
+
+      const choice = data.choices[0];
+      if (!choice.message || !choice.message.content) {
+        console.error("❌ No message content in choice:", choice);
+        return res.status(400).json({
+          success: false,
+          message: "Invalid response format from AI."
+        });
+      }
+
+      let aiResponse = choice.message.content.trim();
+      console.log("✅ Groq Chatbot Response:", aiResponse);
 
       res.json({ 
         success: true,
@@ -445,6 +594,61 @@ export async function createServer() {
   // GROK AI INSIGHTS ENDPOINT
   // ============================================
 
+  // Diagnostic endpoint to test Grok API
+  app.get("/api/insights/test-grok", async (_req, res) => {
+    try {
+      const GROQ_API_KEY = process.env.GROQ_API_KEY;
+
+      if (!GROQ_API_KEY) {
+        return res.status(500).json({
+          success: false,
+          message: "Groq API key not configured"
+        });
+      }
+
+      console.log("🧪 Testing Groq API...");
+
+      const response = await fetch(
+        "https://api.groq.com/openai/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${GROQ_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "llama-3.3-70b-versatile",
+            messages: [
+              {
+                role: "user",
+                content: "Hello, are you working? Reply with just 'Yes' or 'No'.",
+              },
+            ],
+            temperature: 0.3,
+            max_tokens: 100,
+          }),
+        }
+      );
+
+      const data = await response.json();
+      
+      console.log("🧪 Groq test response status:", response.status);
+      console.log("🧪 Groq test response:", data);
+
+      res.json({
+        status: response.status,
+        ok: response.ok,
+        data: data,
+        keyMasked: GROQ_API_KEY.substring(0, 10) + "..."
+      });
+    } catch (error) {
+      console.error("🧪 Test error:", error);
+      res.status(500).json({
+        error: String(error)
+      });
+    }
+  });
+
   app.post("/api/insights/generate", async (req, res) => {
     try {
       const { prompt } = req.body;
@@ -456,20 +660,28 @@ export async function createServer() {
         });
       }
 
-      const GROK_API_KEY = process.env.GROK_API_KEY || "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";
+      const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
-      console.log("🤖 Server: Calling Grok API...");
+      if (!GROQ_API_KEY) {
+        return res.status(500).json({
+          success: false,
+          message: "Groq API key not configured. Please set GROQ_API_KEY environment variable.",
+          isAIGenerated: false
+        });
+      }
+
+      console.log("🤖 Server: Calling Groq API with key:", GROQ_API_KEY.substring(0, 10) + "...");
 
       const response = await fetch(
-        "https://api.x.ai/v1/chat/completions",
+        "https://api.groq.com/openai/v1/chat/completions",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${GROK_API_KEY}`,
+            "Authorization": `Bearer ${GROQ_API_KEY}`,
           },
           body: JSON.stringify({
-            model: "grok-beta",
+            model: "llama-3.3-70b-versatile",
             messages: [
               {
                 role: "user",
@@ -482,26 +694,30 @@ export async function createServer() {
         }
       );
 
-      console.log("📡 Grok API Response Status:", response.status);
+      console.log("📡 Groq API Response Status:", response.status);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error("❌ Grok API Error:", errorData);
+        console.error("❌ Groq API Error:", errorData);
+        console.error("❌ Groq API Key used (masked):", GROQ_API_KEY.substring(0, 20) + "...");
+        console.error("❌ Full error response:", JSON.stringify(errorData, null, 2));
         return res.status(response.status).json({
           success: false,
-          message: `Grok API Error: ${response.status}`,
-          error: errorData
+          message: `Groq API Error: ${response.status} - ${errorData.error?.message || errorData.message || "Unknown error"}`,
+          error: errorData,
+          isAIGenerated: false
         });
       }
 
       const data = await response.json();
-      console.log("📦 Grok Response:", data);
+      console.log("📦 Groq Response:", data);
 
       if (!data.choices || data.choices.length === 0) {
         console.error("❌ No choices in response:", data);
         return res.status(400).json({
           success: false,
-          message: "No choices in API response"
+          message: "No choices in API response",
+          isAIGenerated: false
         });
       }
 
@@ -510,12 +726,13 @@ export async function createServer() {
         console.error("❌ No message content in choice:", choice);
         return res.status(400).json({
           success: false,
-          message: "No message content in response"
+          message: "No message content in response",
+          isAIGenerated: false
         });
       }
 
       let aiResponse = choice.message.content.trim();
-      console.log("✅ Raw Grok Response:", aiResponse);
+      console.log("✅ Raw Groq Response:", aiResponse);
 
       // Remove markdown code blocks if present
       if (aiResponse.includes("```json")) {
@@ -529,28 +746,105 @@ export async function createServer() {
       let parsedInsights;
       try {
         parsedInsights = JSON.parse(aiResponse);
-        console.log("✅ Successfully parsed Grok insights");
+        console.log("✅ Successfully parsed Groq insights");
       } catch (parseError) {
         console.error("❌ Failed to parse response:", aiResponse);
         return res.status(400).json({
           success: false,
           message: "Failed to parse insights response",
-          raw: aiResponse
+          raw: aiResponse,
+          isAIGenerated: false
         });
       }
 
       res.json({
         success: true,
         data: parsedInsights,
-        isAIGenerated: true
+        isAIGenerated: true,
+        source: "groq"
       });
     } catch (error) {
-      console.error("⚠️ Server Error generating insights:", error);
-      res.status(500).json({
-        success: false,
-        message: "Server error generating insights",
-        error: String(error)
-      });
+      console.error("⚠️ Groq Error, trying Gemini fallback:", error);
+      
+      // Fallback to Gemini if Groq fails
+      try {
+        const { prompt } = req.body;
+        const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+        
+        if (!GEMINI_API_KEY) {
+          throw new Error("Gemini API key not configured");
+        }
+
+        console.log("🤖 Fallback: Calling Gemini API...");
+        
+        const response = await fetch(
+          "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + GEMINI_API_KEY,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    {
+                      text: req.body.prompt,
+                    },
+                  ],
+                },
+              ],
+              generationConfig: {
+                temperature: 0.3,
+                maxOutputTokens: 1024,
+              },
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error("❌ Gemini API Error:", errorData);
+          throw new Error("Gemini API also failed");
+        }
+
+        const data = await response.json();
+        console.log("✅ Gemini Response received");
+
+        let aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        
+        // Remove markdown code blocks if present
+        if (aiResponse.includes("```json")) {
+          aiResponse = aiResponse.replace(/```json\n?/g, "").replace(/```\n?/g, "");
+        }
+        if (aiResponse.includes("```")) {
+          aiResponse = aiResponse.replace(/```\n?/g, "");
+        }
+
+        let parsedInsights;
+        try {
+          parsedInsights = JSON.parse(aiResponse);
+          console.log("✅ Successfully parsed Gemini insights");
+        } catch (parseError) {
+          console.error("❌ Failed to parse Gemini response");
+          throw new Error("Failed to parse Gemini response");
+        }
+
+        return res.json({
+          success: true,
+          data: parsedInsights,
+          isAIGenerated: true,
+          source: "gemini"
+        });
+      } catch (geminiError) {
+        console.error("⚠️ Both Groq and Gemini failed:", geminiError);
+        res.status(500).json({
+          success: false,
+          message: "Server error generating insights",
+          error: String(error),
+          isAIGenerated: false
+        });
+      }
     }
   });
 
@@ -737,6 +1031,25 @@ export async function createServer() {
       res.json({ success: true, message: "Plant deleted" });
     } catch (error) {
       res.status(500).json({ success: false, error: String(error) });
+    }
+  });
+
+  // ============================================
+  // PREDICT API HEALTH CHECK ENDPOINT
+  // ============================================
+  const PYTHON_API_URL = process.env.PYTHON_API_URL || "http://localhost:8000";
+
+  app.get("/api/predict/health", async (_req, res) => {
+    try {
+      const response = await fetch(`${PYTHON_API_URL}/health`);
+      const data = await response.json();
+      res.json({ success: true, python_api: data });
+    } catch (error) {
+      res.status(503).json({
+        success: false,
+        message: "Python API is not available",
+        error: String(error)
+      });
     }
   });
 

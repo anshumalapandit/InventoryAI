@@ -19,6 +19,7 @@ import {
   PieChart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Chatbot from "@/components/Chatbot";
 
 export default function Index() {
   const [darkMode, setDarkMode] = React.useState(false);
@@ -142,6 +143,8 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Chatbot Widget */}
+      <Chatbot />
       {/* Navigation */}
       <header
         className={cn(

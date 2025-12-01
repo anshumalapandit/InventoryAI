@@ -38,7 +38,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # Configuration
 # ============================================================================
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
-MODEL_PATH = os.getenv("MODEL_PATH", "./model.pkl")
+MODEL_PATH = os.getenv("MODEL_PATH", os.path.join(os.path.dirname(__file__), "lightgbm_model.pkl"))
 UPLOADS_DIR = Path("./uploads")
 RESULTS_DIR = Path("./results")
 

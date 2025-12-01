@@ -16,7 +16,10 @@
  *   "status": "completed",
  *   "summary": { "total_pred": 12345, "num_skus": 120, "pct_change_vs_last_month": -2.3 },
  *   "preview": [...],
- *   "feature_importances": [...],
+ *   "feature_importances": [...],cd backend
+uvicorn predict_api:app --reload --host 0.0.0.0 --port 8000cd backend
+uvicorn predict_api:app --reload --host 0.0.0.0 --port 8000cd backend
+uvicorn predict_api:app --reload --host 0.0.0.0 --port 8000
  *   "download_url": "/api/predict/download/abc123"
  * }
  */
@@ -58,7 +61,7 @@ ChartJS.register(
   Legend
 );
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "";
 
 export default function PredictUpload() {
   const [file, setFile] = useState(null);
@@ -91,7 +94,7 @@ export default function PredictUpload() {
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
-        const text = evt.target.result;
+        const text = evt.target.result as string;
         const lines = text.split("\n");
         const headers = lines[0].split(",");
         const rows = [];
@@ -130,20 +133,31 @@ export default function PredictUpload() {
       formData.append("file", file);
 
       // TODO: Add user_id header if available from auth context
+      console.log("Uploading to:", `${BACKEND_URL}/api/predict/upload`);
       const response = await fetch(`${BACKEND_URL}/api/predict/upload`, {
         method: "POST",
         body: formData,
       });
 
+      console.log("Response status:", response.status);
+      
       if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.detail || "Upload failed");
+        let errorMessage = "Upload failed";
+        try {
+          const errData = await response.json();
+          errorMessage = errData.detail || errData.message || "Upload failed";
+        } catch {
+          errorMessage = `Server error: ${response.status}`;
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
+      console.log("Results received:", data);
       setResults(data);
     } catch (err) {
-      setError(err.message || "An error occurred");
+      console.error("Upload error:", err);
+      setError(err.message || "An error occurred during upload");
     } finally {
       setLoading(false);
     }
@@ -579,7 +593,7 @@ export default function PredictUpload() {
                       <tr key={idx} className="border-b border-border">
                         {Object.values(row).map((val, vidx) => (
                           <td key={vidx} className="py-1 px-2">
-                            {val}
+                            {String(val)}
                           </td>
                         ))}
                       </tr>
