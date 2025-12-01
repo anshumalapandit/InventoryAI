@@ -4,18 +4,25 @@ import { analyzeInventoryWithAI, generateProfitAnalysis, generateInventoryRecomm
 
 export const handleChat: RequestHandler = async (req, res) => {
   try {
-    const { message, context } = req.body as ChatRequest;
+    const { message } = req.body as ChatRequest;
 
+    if (!message || message.trim().length === 0) {
+      return res.status(400).json({
+        message: "Please enter a message"
+      });
+    }
+
+    const lowerMessage = message.toLowerCase();
     let response: string;
-    switch (context) {
-      case 'inventory':
-        response = await analyzeInventoryWithAI(message);
-        break;
-      case 'profit':
-        response = await generateProfitAnalysis(message);
-        break;
-      default:
-        response = await generateInventoryRecommendations(message);
+
+    // Detect intent from message
+    if (lowerMessage.includes("profit") || lowerMessage.includes("value") || lowerMessage.includes("expensive") || lowerMessage.includes("earning")) {
+      response = await generateProfitAnalysis(message);
+    } else if (lowerMessage.includes("reorder") || lowerMessage.includes("low stock") || lowerMessage.includes("suggest") || lowerMessage.includes("recommend")) {
+      response = await generateInventoryRecommendations(message);
+    } else {
+      // Default to inventory analysis
+      response = await analyzeInventoryWithAI(message);
     }
 
     const chatResponse: ChatResponse = {

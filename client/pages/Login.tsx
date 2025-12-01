@@ -33,10 +33,22 @@ export default function Login() {
         }),
       });
 
+      // If the response is not OK (e.g. 401, 500) try to surface the backend message.
+      if (!response.ok) {
+        let errBody: any = null;
+        try {
+          errBody = await response.json();
+        } catch (_) {
+          // ignore parse errors
+        }
+        throw new Error(errBody?.message || `Request failed (${response.status})`);
+      }
+
       const data = await response.json();
 
       if (!data.success) {
-        throw new Error(data.message || "Login failed");
+        // Backend sent a structured failure
+        throw new Error(data.message || "Invalid credentials");
       }
 
       // Store user data and token
@@ -52,7 +64,15 @@ export default function Login() {
 
       navigate(roleRoutes[data.data.user.role as keyof typeof roleRoutes] || "/");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      // Show a friendly message when the network/backend is unreachable
+      const message =
+        err instanceof Error
+          ? (err.message.includes("Failed to fetch") || err.message.includes("NetworkError")
+              ? "Failed to contact backend — make sure the server is running"
+              : err.message)
+          : "Login failed";
+
+      setError(message);
     } finally {
       setIsLoading(false);
     }

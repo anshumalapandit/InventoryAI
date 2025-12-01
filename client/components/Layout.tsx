@@ -12,6 +12,7 @@ import {
   Moon,
   Sun,
   LogOut,
+  TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth, useHasRole } from "@/components/ProtectedRoute";
@@ -40,32 +41,14 @@ export default function Layout({ children }: LayoutProps) {
 
   const isActive = (path: string) => location.pathname === path;
 
-  // Get navigation items based on user role
-  // Get role-specific home route
-  const getRoleHomeRoute = (role: string) => {
-    const roleRoutes = {
-      admin: "/admin",
-      manager: "/plant-manager",
-      analyst: "/analytics",
-    };
-    return roleRoutes[role as keyof typeof roleRoutes] || "/";
-  };
-
   const getNavigationItems = () => {
-    const roleSpecificDashboard = user ? getRoleHomeRoute(user.role) : "/login";
     const baseItems = [
       {
+        id: "home",
         label: "Home",
         href: "/",
         icon: Zap,
         badge: "Landing",
-        roles: ["admin", "manager", "analyst"],
-      },
-      {
-        label: "Dashboard",
-        href: roleSpecificDashboard,
-        icon: BarChart3,
-        badge: "Overview",
         roles: ["admin", "manager", "analyst"],
       },
     ];
@@ -73,22 +56,33 @@ export default function Layout({ children }: LayoutProps) {
     const roleItems = {
       admin: [
         {
+          id: "admin-dashboard",
+          label: "Dashboard",
+          href: "/admin",
+          icon: BarChart3,
+          badge: "Overview",
+          roles: ["admin"],
+        },
+        {
+          id: "admin-panel",
           label: "Admin Panel",
           href: "/admin",
           icon: Settings,
           badge: "System",
           roles: ["admin"],
         },
-        {
-          label: "Integrations",
-          href: "/integration",
-          icon: Zap,
-          badge: "API",
-          roles: ["admin"],
-        },
       ],
       manager: [
         {
+          id: "manager-dashboard",
+          label: "Dashboard",
+          href: "/plant-manager",
+          icon: BarChart3,
+          badge: "Overview",
+          roles: ["manager"],
+        },
+        {
+          id: "plant-manager",
           label: "Plant Manager",
           href: "/plant-manager",
           icon: Factory,
@@ -96,6 +90,7 @@ export default function Layout({ children }: LayoutProps) {
           roles: ["manager"],
         },
         {
+          id: "procurement",
           label: "Procurement",
           href: "/procurement",
           icon: ShoppingCart,
@@ -103,6 +98,7 @@ export default function Layout({ children }: LayoutProps) {
           roles: ["manager"],
         },
         {
+          id: "operations",
           label: "Operations",
           href: "/operations",
           icon: BarChart3,
@@ -112,6 +108,15 @@ export default function Layout({ children }: LayoutProps) {
       ],
       analyst: [
         {
+          id: "analyst-dashboard",
+          label: "Dashboard",
+          href: "/analytics",
+          icon: BarChart3,
+          badge: "Overview",
+          roles: ["analyst"],
+        },
+        {
+          id: "analytics",
           label: "Analytics",
           href: "/analytics",
           icon: BarChart3,
@@ -119,6 +124,7 @@ export default function Layout({ children }: LayoutProps) {
           roles: ["analyst"],
         },
         {
+          id: "forecasting",
           label: "Forecasting",
           href: "/forecasting",
           icon: Zap,
@@ -134,6 +140,16 @@ export default function Layout({ children }: LayoutProps) {
     if (userRole && roleItems[userRole]) {
       items.push(...roleItems[userRole]);
     }
+
+    // Add Predict for all authenticated users (no role restrictions)
+    items.push({
+      id: "predict",
+      label: "Predict",
+      href: "/predict",
+      icon: TrendingUp,
+      badge: "Forecast",
+      roles: ["admin", "manager", "analyst", "user"], // Include all possible roles
+    });
 
     return items;
   };
@@ -152,7 +168,6 @@ export default function Layout({ children }: LayoutProps) {
             >
               {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
-                        {/* Logo always links to landing page */}
             <Link 
               to="/" 
               className="inline-flex items-center gap-3"
@@ -160,7 +175,7 @@ export default function Layout({ children }: LayoutProps) {
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80">
                 <Zap className="h-7 w-7 text-white" />
               </div>
-              <span className="text-xl font-semibold text-sidebar-foreground">
+              <span className="text-xl font-semibold text-foreground">
                 InventoryAI
               </span>
             </Link>
@@ -209,9 +224,16 @@ export default function Layout({ children }: LayoutProps) {
             {navigationItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href);
+              const userRole = user?.role as keyof typeof roleItems;
+              
+              // Only show item if user's role is in the item's roles array
+              if (!item.roles.includes(userRole)) {
+                return null;
+              }
+              
               return (
                 <Link
-                  key={item.href}
+                  key={item.id}
                   to={item.href}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors",
@@ -223,11 +245,6 @@ export default function Layout({ children }: LayoutProps) {
                   <Icon size={20} />
                   <div className="flex flex-col">
                     <span>{item.label}</span>
-                    {item.description && (
-                      <span className="text-xs opacity-75">
-                        {item.description}
-                      </span>
-                    )}
                   </div>
                 </Link>
               );

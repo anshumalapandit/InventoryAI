@@ -65,8 +65,12 @@ export function useAuth() {
   const user = useCurrentUser();
 
   const logout = () => {
+    // Clear localStorage
     localStorage.removeItem("user");
-    navigate("/login");
+    localStorage.removeItem("token");
+    
+    // Force navigate to login
+    navigate("/login", { replace: true });
   };
 
   const login = (email: string, password: string, role: string) => {
@@ -79,7 +83,8 @@ export function useAuth() {
       loginTime: new Date().toISOString(),
     };
     localStorage.setItem("user", JSON.stringify(userData));
-    navigate(`/${role}`);
+    localStorage.setItem("token", token);
+    navigate(`/${role}`, { replace: true });
   };
 
   return {

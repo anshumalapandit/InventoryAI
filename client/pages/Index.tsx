@@ -174,6 +174,9 @@ export default function Index() {
               <a href="#pricing" className="text-sm font-medium text-foreground transition-colors hover:text-primary">
                 Pricing
               </a>
+              <Link to="/predict" className="text-sm font-medium text-foreground transition-colors hover:text-primary">
+                Predict
+              </Link>
             </nav>
 
             <div className="flex items-center gap-4">
@@ -220,6 +223,15 @@ export default function Index() {
               <a href="#testimonials" className="block rounded-lg px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
                 Customers
               </a>
+              <a href="#pricing" className="block rounded-lg px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
+                Pricing
+              </a>
+              <Link
+                to="/predict"
+                className="block rounded-lg px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
+              >
+                Predict
+              </Link>
               <Link
                 to="/login"
                 className="block rounded-lg px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary"

@@ -106,11 +106,30 @@ export async function createServer() {
     try {
       let aiResponse: string;
       
+      // Fetch inventory data with product details
+      const invResult = await query(`
+        SELECT 
+          i.*, 
+          p.sku, 
+          p.name, 
+          p.category, 
+          p.unit_price,
+          p.cost_price,
+          p.reorder_level,
+          p.min_order_qty
+        FROM inventory i 
+        JOIN products p ON i.product_id = p.id 
+        ORDER BY p.name
+      `);
+
+      const inventoryData = invResult.rows;
+      
       if (context === "profit") {
         aiResponse = await generateProfitAnalysis(message);
       } else if (context === "inventory") {
         aiResponse = await generateInventoryRecommendations(message);
       } else {
+        // For general queries, use forecast analysis
         aiResponse = await analyzeInventoryWithAI(message);
       }
 
@@ -423,6 +442,119 @@ export async function createServer() {
   });
 
   // ============================================
+  // GROK AI INSIGHTS ENDPOINT
+  // ============================================
+
+  app.post("/api/insights/generate", async (req, res) => {
+    try {
+      const { prompt } = req.body;
+      
+      if (!prompt) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Prompt is required" 
+        });
+      }
+
+      const GROK_API_KEY = process.env.GROK_API_KEY || "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";
+
+      console.log("🤖 Server: Calling Grok API...");
+
+      const response = await fetch(
+        "https://api.x.ai/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${GROK_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "grok-beta",
+            messages: [
+              {
+                role: "user",
+                content: prompt,
+              },
+            ],
+            temperature: 0.3,
+            max_tokens: 1024,
+          }),
+        }
+      );
+
+      console.log("📡 Grok API Response Status:", response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("❌ Grok API Error:", errorData);
+        return res.status(response.status).json({
+          success: false,
+          message: `Grok API Error: ${response.status}`,
+          error: errorData
+        });
+      }
+
+      const data = await response.json();
+      console.log("📦 Grok Response:", data);
+
+      if (!data.choices || data.choices.length === 0) {
+        console.error("❌ No choices in response:", data);
+        return res.status(400).json({
+          success: false,
+          message: "No choices in API response"
+        });
+      }
+
+      const choice = data.choices[0];
+      if (!choice.message || !choice.message.content) {
+        console.error("❌ No message content in choice:", choice);
+        return res.status(400).json({
+          success: false,
+          message: "No message content in response"
+        });
+      }
+
+      let aiResponse = choice.message.content.trim();
+      console.log("✅ Raw Grok Response:", aiResponse);
+
+      // Remove markdown code blocks if present
+      if (aiResponse.includes("```json")) {
+        aiResponse = aiResponse.replace(/```json\n?/g, "").replace(/```\n?/g, "");
+      }
+      if (aiResponse.includes("```")) {
+        aiResponse = aiResponse.replace(/```\n?/g, "");
+      }
+
+      // Parse JSON
+      let parsedInsights;
+      try {
+        parsedInsights = JSON.parse(aiResponse);
+        console.log("✅ Successfully parsed Grok insights");
+      } catch (parseError) {
+        console.error("❌ Failed to parse response:", aiResponse);
+        return res.status(400).json({
+          success: false,
+          message: "Failed to parse insights response",
+          raw: aiResponse
+        });
+      }
+
+      res.json({
+        success: true,
+        data: parsedInsights,
+        isAIGenerated: true
+      });
+    } catch (error) {
+      console.error("⚠️ Server Error generating insights:", error);
+      res.status(500).json({
+        success: false,
+        message: "Server error generating insights",
+        error: String(error)
+      });
+    }
+  });
+
+  // ============================================
   // USERS ENDPOINTS
   // ============================================
 
@@ -453,9 +585,13 @@ export async function createServer() {
   app.post("/api/users", async (req, res) => {
     try {
       const { email, password, role, name } = req.body;
+      
+      // Hash password before storing
+      const hashedPassword = await hashPassword(password);
+      
       const result = await query(
         "INSERT INTO users (email, password, role, name) VALUES ($1, $2, $3, $4) RETURNING id, email, role, name, created_at",
-        [email, password, role || "manager", name]
+        [email, hashedPassword, role || "manager", name]
       );
       res.status(201).json({ success: true, data: result.rows[0] });
     } catch (error) {

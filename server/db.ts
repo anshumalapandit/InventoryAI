@@ -147,6 +147,18 @@ export async function initializeDatabase() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
+      CREATE TABLE IF NOT EXISTS ai_models (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        model_type VARCHAR(100),
+        status VARCHAR(50) DEFAULT 'Active',
+        accuracy DECIMAL(5, 2),
+        last_trained_date TIMESTAMP,
+        data_points INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
       CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);
       CREATE INDEX IF NOT EXISTS idx_inventory_product ON inventory(product_id);
       CREATE INDEX IF NOT EXISTS idx_sales_product ON sales_transactions(product_id);

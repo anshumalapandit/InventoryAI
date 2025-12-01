@@ -7,6 +7,7 @@ import Analytics from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
 import PlantManager from "./pages/PlantManager";
 import Procurement from "./pages/Procurement";
+import Predict from "./pages/Predict";
 import Index from "./pages/Index";
 import ProtectedRoute from "./components/ProtectedRoute";
 import RoleBasedRedirect from "./components/RoleBasedRedirect";
@@ -52,7 +53,12 @@ export default function App() {
           <ProtectedRoute allowedRoles={["analyst"]}>
             <Analytics />
           </ProtectedRoute>
-        } />        {/* Catch all route */}
+        } />
+
+        {/* Predict Route - PUBLIC, no login required */}
+        <Route path="/predict" element={<Predict />} />
+
+        {/* Catch all route */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

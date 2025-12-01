@@ -75,18 +75,70 @@ export default function AdminDashboard() {
 
 // Overview Section
 function OverviewSection() {
+  const [stats, setStats] = useState({
+    totalPlants: 0,
+    activeUsers: 0,
+    totalProducts: 0,
+    totalModels: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+        const [usersRes, plantsRes, productsRes, modelsRes] = await Promise.all([
+          fetch("/api/users", { headers }),
+          fetch("/api/plants", { headers }),
+          fetch("/api/products", { headers }),
+          fetch("/api/ai-models", { headers }),
+        ]);
+
+        const usersData = await usersRes.json();
+        const plantsData = await plantsRes.json();
+        const productsData = await productsRes.json();
+        const modelsData = await modelsRes.json();
+
+        setStats({
+          totalPlants: plantsData.data?.length || 0,
+          activeUsers: usersData.data?.length || 0,
+          totalProducts: productsData.data?.length || 0,
+          totalModels: modelsData.data?.length || 0,
+        });
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        {[
-          { label: "Total Plants", value: "12", trend: "+2 this month", color: "primary" },
-          { label: "Active Users", value: "284", trend: "+18 this month", color: "success" },
-          { label: "API Connections", value: "8", trend: "All healthy", color: "success" },
-          { label: "Model Accuracy", value: "92.4%", trend: "+2.1% improvement", color: "primary" },
-        ].map((stat) => (
-          <StatCard key={stat.label} {...stat} />
-        ))}
+        {loading ? (
+          Array(4).fill(null).map((_, i) => (
+            <div key={i} className="rounded-lg border border-border bg-card p-6 animate-pulse">
+              <div className="h-4 bg-secondary rounded w-24 mb-2"></div>
+              <div className="h-8 bg-secondary rounded w-12 mb-2"></div>
+              <div className="h-3 bg-secondary rounded w-32"></div>
+            </div>
+          ))
+        ) : (
+          [
+            { label: "Total Plants", value: stats.totalPlants.toString(), trend: "Active plants", color: "primary" },
+            { label: "Active Users", value: stats.activeUsers.toString(), trend: "Total users", color: "success" },
+            { label: "Total Products", value: stats.totalProducts.toString(), trend: "In inventory", color: "success" },
+            { label: "AI Models", value: stats.totalModels.toString(), trend: "Deployed models", color: "primary" },
+          ].map((stat) => (
+            <StatCard key={stat.label} {...stat} />
+          ))
+        )}
       </div>
 
       {/* System Health */}
@@ -145,7 +197,7 @@ function UsersSection() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [formData, setFormData] = useState({ name: "", email: "", role: "manager" });
+  const [formData, setFormData] = useState({ name: "", email: "", password: "", role: "manager" });
 
   useEffect(() => {
     fetchUsers();
@@ -171,22 +223,35 @@ function UsersSection() {
       return;
     }
 
+    // If creating new user, password is required
+    if (!editingId && !formData.password) {
+      alert("Password is required for new users");
+      return;
+    }
+
     try {
       const url = editingId ? `/api/users/${editingId}` : "/api/users";
       const method = editingId ? "PUT" : "POST";
 
+      // Only include password if creating new user or password field is filled
+      const payload = editingId && !formData.password 
+        ? { name: formData.name, email: formData.email, role: formData.role }
+        : formData;
+
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
       if (data.success) {
         fetchUsers();
         setShowModal(false);
-        setFormData({ name: "", email: "", role: "manager" });
+        setFormData({ name: "", email: "", password: "", role: "manager" });
         setEditingId(null);
+      } else {
+        alert(data.message || "Failed to save user");
       }
     } catch (error) {
       console.error("Error saving user:", error);
@@ -211,7 +276,7 @@ function UsersSection() {
 
   const handleEdit = (user: any) => {
     setEditingId(user.id);
-    setFormData({ name: user.name, email: user.email, role: user.role });
+    setFormData({ name: user.name, email: user.email, role: user.role, password: "" });
     setShowModal(true);
   };
 
@@ -222,7 +287,7 @@ function UsersSection() {
         <button
           onClick={() => {
             setEditingId(null);
-            setFormData({ name: "", email: "", role: "manager" });
+            setFormData({ name: "", email: "", password: "", role: "manager" });
             setShowModal(true);
           }}
           className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
@@ -244,26 +309,30 @@ function UsersSection() {
             { key: "email", label: "Email" },
             { key: "role", label: "Role" },
             { key: "created_at", label: "Created", render: (date) => new Date(date).toLocaleDateString() },
+            { 
+              key: "id", 
+              label: "Actions",
+              render: (id, user) => (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleEdit(user)}
+                    className="rounded-lg p-2 hover:bg-secondary transition-colors"
+                    title="Edit"
+                  >
+                    <Edit2 size={16} className="text-muted-foreground" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(user.id)}
+                    className="rounded-lg p-2 hover:bg-secondary transition-colors"
+                    title="Delete"
+                  >
+                    <Trash2 size={16} className="text-muted-foreground" />
+                  </button>
+                </div>
+              )
+            },
           ]}
           data={users}
-          renderActions={(item) => (
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleEdit(item)}
-                className="rounded-lg p-2 hover:bg-secondary"
-                title="Edit"
-              >
-                <Edit2 size={16} className="text-muted-foreground" />
-              </button>
-              <button
-                onClick={() => handleDelete(item.id)}
-                className="rounded-lg p-2 hover:bg-secondary"
-                title="Delete"
-              >
-                <Trash2 size={16} className="text-muted-foreground" />
-              </button>
-            </div>
-          )}
         />
       )}
 
@@ -309,6 +378,22 @@ function UsersSection() {
                   placeholder="john@company.com"
                 />
               </div>
+
+              {!editingId && (
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    placeholder="Enter password"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Required for new users</p>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
@@ -361,7 +446,10 @@ function PlantsSection() {
 
   const fetchPlants = async () => {
     try {
-      const response = await fetch("/api/plants");
+      const token = localStorage.getItem('token');
+      const response = await fetch("/api/plants", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
       const data = await response.json();
       if (data.success) {
         setPlants(data.data);
@@ -380,12 +468,16 @@ function PlantsSection() {
     }
 
     try {
+      const token = localStorage.getItem('token');
       const url = editingId ? `/api/plants/${editingId}` : "/api/plants";
       const method = editingId ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ ...formData, capacity: parseInt(formData.capacity) }),
       });
 
@@ -395,6 +487,9 @@ function PlantsSection() {
         setShowModal(false);
         setFormData({ name: "", location: "", capacity: "" });
         setEditingId(null);
+        alert("Plant saved successfully!");
+      } else {
+        alert(data.message || "Failed to save plant");
       }
     } catch (error) {
       console.error("Error saving plant:", error);
@@ -406,10 +501,17 @@ function PlantsSection() {
     if (!confirm("Are you sure you want to delete this plant?")) return;
 
     try {
-      const response = await fetch(`/api/plants/${id}`, { method: "DELETE" });
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/plants/${id}`, { 
+        method: "DELETE",
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
       const data = await response.json();
       if (data.success) {
         fetchPlants();
+        alert("Plant deleted successfully!");
+      } else {
+        alert(data.message || "Failed to delete plant");
       }
     } catch (error) {
       console.error("Error deleting plant:", error);
@@ -456,26 +558,30 @@ function PlantsSection() {
                 {status}
               </span>
             )},
+            { 
+              key: "id", 
+              label: "Actions",
+              render: (id, item) => (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleEdit(item)}
+                    className="rounded-lg p-2 hover:bg-secondary transition-colors"
+                    title="Edit"
+                  >
+                    <Edit2 size={16} className="text-muted-foreground" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(item.id)}
+                    className="rounded-lg p-2 hover:bg-secondary transition-colors"
+                    title="Delete"
+                  >
+                    <Trash2 size={16} className="text-muted-foreground" />
+                  </button>
+                </div>
+              )
+            },
           ]}
           data={plants.map((p) => ({ ...p, capacity: `${p.capacity} units/day` }))}
-          renderActions={(item) => (
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleEdit(item)}
-                className="rounded-lg p-2 hover:bg-secondary"
-                title="Edit"
-              >
-                <Edit2 size={16} className="text-muted-foreground" />
-              </button>
-              <button
-                onClick={() => handleDelete(item.id)}
-                className="rounded-lg p-2 hover:bg-secondary"
-                title="Delete"
-              >
-                <Trash2 size={16} className="text-muted-foreground" />
-              </button>
-            </div>
-          )}
         />
       )}
 
@@ -577,10 +683,15 @@ function ProductsSection() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch("/api/products");
+      const token = localStorage.getItem('token');
+      const response = await fetch("/api/products", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
       const data = await response.json();
       if (data.success) {
         setProducts(data.data);
+      } else {
+        console.error("Error fetching products:", data.message);
       }
     } catch (error) {
       console.error("Error fetching products:", error);
@@ -596,12 +707,16 @@ function ProductsSection() {
     }
 
     try {
+      const token = localStorage.getItem('token');
       const url = editingId ? `/api/products/${editingId}` : "/api/products";
       const method = editingId ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({
           ...formData,
           unit_price: parseFloat(formData.unit_price),
@@ -615,6 +730,9 @@ function ProductsSection() {
         setShowModal(false);
         setFormData({ sku: "", name: "", category: "", unit_price: "", cost_price: "" });
         setEditingId(null);
+        alert("Product saved successfully!");
+      } else {
+        alert(data.message || "Failed to save product");
       }
     } catch (error) {
       console.error("Error saving product:", error);
@@ -626,10 +744,17 @@ function ProductsSection() {
     if (!confirm("Are you sure you want to delete this product?")) return;
 
     try {
-      const response = await fetch(`/api/products/${id}`, { method: "DELETE" });
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/products/${id}`, { 
+        method: "DELETE",
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
       const data = await response.json();
       if (data.success) {
         fetchProducts();
+        alert("Product deleted successfully!");
+      } else {
+        alert(data.message || "Failed to delete product");
       }
     } catch (error) {
       console.error("Error deleting product:", error);
@@ -679,26 +804,30 @@ function ProductsSection() {
             { key: "category", label: "Category" },
             { key: "unit_price", label: "Unit Price" },
             { key: "cost_price", label: "Cost Price" },
+            { 
+              key: "id", 
+              label: "Actions",
+              render: (id, item) => (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleEdit(item)}
+                    className="rounded-lg p-2 hover:bg-secondary transition-colors"
+                    title="Edit"
+                  >
+                    <Edit2 size={16} className="text-muted-foreground" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(item.id)}
+                    className="rounded-lg p-2 hover:bg-secondary transition-colors"
+                    title="Delete"
+                  >
+                    <Trash2 size={16} className="text-muted-foreground" />
+                  </button>
+                </div>
+              )
+            },
           ]}
           data={products}
-          renderActions={(item) => (
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleEdit(item)}
-                className="rounded-lg p-2 hover:bg-secondary"
-                title="Edit"
-              >
-                <Edit2 size={16} className="text-muted-foreground" />
-              </button>
-              <button
-                onClick={() => handleDelete(item.id)}
-                className="rounded-lg p-2 hover:bg-secondary"
-                title="Delete"
-              >
-                <Trash2 size={16} className="text-muted-foreground" />
-              </button>
-            </div>
-          )}
         />
       )}
 
@@ -829,7 +958,10 @@ function ModelsSection() {
 
   const fetchModels = async () => {
     try {
-      const response = await fetch("/api/ai-models");
+      const token = localStorage.getItem('token');
+      const response = await fetch("/api/ai-models", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
       const data = await response.json();
       if (data.success) {
         setModels(data.data);
@@ -848,12 +980,16 @@ function ModelsSection() {
     }
 
     try {
+      const token = localStorage.getItem('token');
       const url = editingId ? `/api/ai-models/${editingId}` : "/api/ai-models";
       const method = editingId ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({
           ...formData,
           accuracy: parseFloat(formData.accuracy),
@@ -866,6 +1002,9 @@ function ModelsSection() {
         setShowModal(false);
         setFormData({ name: "", model_type: "demand_forecast", status: "Active", accuracy: "" });
         setEditingId(null);
+        alert("Model saved successfully!");
+      } else {
+        alert(data.message || "Failed to save model");
       }
     } catch (error) {
       console.error("Error saving model:", error);
@@ -877,10 +1016,17 @@ function ModelsSection() {
     if (!confirm("Are you sure you want to delete this model?")) return;
 
     try {
-      const response = await fetch(`/api/ai-models/${id}`, { method: "DELETE" });
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/ai-models/${id}`, { 
+        method: "DELETE",
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
       const data = await response.json();
       if (data.success) {
         fetchModels();
+        alert("Model deleted successfully!");
+      } else {
+        alert(data.message || "Failed to delete model");
       }
     } catch (error) {
       console.error("Error deleting model:", error);
@@ -934,26 +1080,30 @@ function ModelsSection() {
             )},
             { key: "accuracy", label: "Accuracy" },
             { key: "last_trained_date", label: "Last Trained", render: (date) => date ? new Date(date).toLocaleDateString() : "Never" },
+            { 
+              key: "id", 
+              label: "Actions",
+              render: (id, item) => (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleEdit(item)}
+                    className="rounded-lg p-2 hover:bg-secondary transition-colors"
+                    title="Edit"
+                  >
+                    <Edit2 size={16} className="text-muted-foreground" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(item.id)}
+                    className="rounded-lg p-2 hover:bg-secondary transition-colors"
+                    title="Delete"
+                  >
+                    <Trash2 size={16} className="text-muted-foreground" />
+                  </button>
+                </div>
+              )
+            },
           ]}
           data={models}
-          renderActions={(item) => (
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleEdit(item)}
-                className="rounded-lg p-2 hover:bg-secondary"
-                title="Edit"
-              >
-                <Edit2 size={16} className="text-muted-foreground" />
-              </button>
-              <button
-                onClick={() => handleDelete(item.id)}
-                className="rounded-lg p-2 hover:bg-secondary"
-                title="Delete"
-              >
-                <Trash2 size={16} className="text-muted-foreground" />
-              </button>
-            </div>
-          )}
         />
       )}
 
