@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js"
+  "start": "node index.js",
+  "build": "echo \"skip tsc in production\""
   },
   "dependencies": {
     "express": "^4.18.2",
