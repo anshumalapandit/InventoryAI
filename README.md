@@ -10,9 +10,6 @@ and backend deployed on railway.
 ### **demo video link (not full demo without predict feature) 📷**
 https://drive.google.com/file/d/1afM1BwABh0n3k99KqsXHGQuXRyegsYIl/view?usp=drivesdk
 
-That above  repository mentioned contains the full **frontend + backend + ML + API integration** codebase for the AI-Inventory-Forecasting system.
-(facing some difficulty to merge here thats why added website codes in another repo)
----
 
 # 📌 Overview  
 This project delivers an **AI-driven inventory forecasting and optimization system** for the manufacturing industry.  
